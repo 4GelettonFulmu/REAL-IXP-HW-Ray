@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shadow Puppet Interactive</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: 'Georgia', serif;
+            background: #e8dcc8;
+            position: relative;
+        }
+
+        #container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background-image:
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(139, 119, 101, 0.02) 2px, rgba(139, 119, 101, 0.02) 4px),
+                repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(139, 119, 101, 0.02) 2px, rgba(139, 119, 101, 0.02) 4px);
+            background-color: #f5ebe0;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .tool {
+            cursor: pointer;
+            transition: filter 0.2s;
+        }
+
+        .tool:hover {
+            filter: drop-shadow(0 0 8px rgba(255, 165, 0, 0.8));
+        }
+
+        #message-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            background: rgba(245, 235, 224, 0.95);
+            z-index: 1000;
+        }
+
+        #message-text {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            color: #2d1810;
+            text-align: center;
+            padding: 2rem;
+            max-width: 80%;
+            line-height: 1.6;
+            font-weight: normal;
+            letter-spacing: 0.05em;
+        }
+
+        #restart-button {
+            margin-top: 2rem;
+            padding: 1rem 3rem;
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            background: transparent;
+            border: 2px solid #2d1810;
+            color: #2d1810;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.1em;
+        }
+
+        #restart-button:hover {
+            background: #2d1810;
+            color: #f5ebe0;
+        }
+
+        .fade-out {
+            animation: fadeOut 2s forwards;
+        }
+
+        @keyframes fadeOut {
+            to {
+                opacity: 0.15;
+            }
+        }
+
+        .scene-element {
+            transition: opacity 2s;
+        }
+
+        .disabled {
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid meet" id="main-svg">
+            <defs>
+                <!-- Amber glow filter -->
+                <filter id="amber-glow">
+                    <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+                    <feMerge>
+                        <feMergeNode in="coloredBlur"/>
+                        <feMergeNode in="SourceGraphic"/>
+                    </feMerge>
+                </filter>
+
+                <!-- Leather texture pattern -->
+                <pattern id="leather-texture" width="20" height="20" patternUnits="userSpaceOnUse">
+                    <circle cx="2" cy="2" r="0.5" fill="rgba(0,0,0,0.05)"/>
+                    <circle cx="12" cy="12" r="0.5" fill="rgba(0,0,0,0.05)"/>
+                    <circle cx="7" cy="17" r="0.5" fill="rgba(0,0,0,0.05)"/>
+                </pattern>
+
+                <!-- Perforation pattern -->
+                <pattern id="perforation" width="15" height="15" patternUnits="userSpaceOnUse">
+                    <circle cx="7.5" cy="7.5" r="1" fill="rgba(255,255,255,0.2)"/>
+                </pattern>
+
+                <!-- Ink wash gradient -->
+                <linearGradient id="ink-wash" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" style="stop-color:#b8d4e8;stop-opacity:0.3" />
+                    <stop offset="100%" style="stop-color:#4a6fa5;stop-opacity:0.6" />
+                </linearGradient>
+            </defs>
+
+            <!-- Sky -->
+            <rect x="0" y="0" width="1200" height="350" fill="url(#ink-wash)"/>
+
+            <!-- Earth/Ground -->
+            <path d="M 0 350 Q 300 340 600 350 Q 900 360 1200 350 L 1200 800 L 0 800 Z"
+                  fill="#d4c5a9" opacity="0.8"/>
+
+            <!-- Mountains (Right Side) - Two visible peaks -->
+            <g id="mountains" class="scene-element">
+                <!-- Back mountain -->
+                <path id="back-mountain" d="M 650 350 Q 750 200 850 250 Q 950 300 1050 320 Q 1100 330 1150 340 L 1150 500 L 650 500 Z"
+                      fill="#3d5a4f" fill-opacity="0.4" stroke="#1a2a23" stroke-width="1.5"/>
+
+                <!-- Front mountain (main) -->
+                <path id="front-mountain" d="M 600 380 Q 650 250 720 280 Q 780 160 860 220 Q 920 180 1000 280 Q 1080 340 1150 360 L 1150 500 L 600 500 Z"
+                      fill="#5a8270" fill-opacity="0.5" stroke="#2d3d35" stroke-width="2" filter="url(#amber-glow)"/>
+
+                <!-- Mountain texture details (hemp-fiber strokes) -->
+                <g opacity="0.6">
+                    <path d="M 720 300 Q 725 320 730 340" stroke="#1a2a23" stroke-width="1" fill="none"/>
+                    <path d="M 760 280 Q 765 310 770 340" stroke="#1a2a23" stroke-width="1" fill="none"/>
+                    <path d="M 860 240 Q 865 270 870 300" stroke="#1a2a23" stroke-width="1" fill="none"/>
+                    <path d="M 900 260 Q 905 290 910 320" stroke="#1a2a23" stroke-width="1" fill="none"/>
+                    <path d="M 1000 300 Q 1005 330 1010 360" stroke="#1a2a23" stroke-width="1" fill="none"/>
+                </g>
+
+                <!-- Moss dots -->
+                <g opacity="0.5">
+                    <circle cx="740" cy="320" r="2" fill="#2d3d35"/>
+                    <circle cx="745" cy="335" r="1.5" fill="#2d3d35"/>
+                    <circle cx="880" cy="280" r="2" fill="#2d3d35"/>
+                    <circle cx="890" cy="295" r="1.5" fill="#2d3d35"/>
+                    <circle cx="1020" cy="330" r="2" fill="#2d3d35"/>
+                </g>
+
+                <!-- Sparse pine tree -->
+                <g opacity="0.7">
+                    <line x1="920" y1="350" x2="920" y2="280" stroke="#2d3d35" stroke-width="2"/>
+                    <path d="M 920 290 L 910 300 L 930 300 Z" fill="#3d5a4f"/>
+                    <path d="M 920 305 L 908 318 L 932 318 Z" fill="#3d5a4f"/>
+                    <path d="M 920 320 L 905 335 L 935 335 Z" fill="#3d5a4f"/>
+                </g>
+            </g>
+
+            <!-- Farmer (Left Side) - Shadow puppet style -->
+            <g id="farmer" class="scene-element">
+                <!-- Body segments with brass rivet joints -->
+
+                <!-- Legs -->
+                <g id="farmer-legs">
+                    <!-- Left leg -->
+                    <ellipse cx="180" cy="520" rx="8" ry="30" fill="#c19a6b" fill-opacity="0.7" stroke="#2d1810" stroke-width="2"/>
+                    <ellipse cx="180" cy="560" rx="7" ry="25" fill="#8b7355" fill-opacity="0.7" stroke="#2d1810" stroke-width="2"/>
+                    <!-- Right leg -->
+                    <ellipse cx="200" cy="525" rx="8" ry="28" fill="#c19a6b" fill-opacity="0.7" stroke="#2d1810" stroke-width="2"/>
+                    <ellipse cx="200" cy="565" rx="7" ry="25" fill="#8b7355" fill-opacity="0.7" stroke="#2d1810" stroke-width="2"/>
+                    <!-- Rivet joints -->
+                    <circle cx="180" cy="545" r="3" fill="#b8860b" stroke="#8b6914" stroke-width="1"/>
+                    <circle cx="200" cy="548" r="3" fill="#b8860b" stroke="#8b6914" stroke-width="1"/>
+                    <!-- Sandals -->
+                    <ellipse cx="180" cy="585" rx="10" ry="4" fill="#d2b48c" stroke="#2d1810" stroke-width="1.5"/>
+                    <ellipse cx="200" cy="590" rx="10" ry="4" fill="#d2b48c" stroke="#2d1810" stroke-width="1.5"/>
+                </g>
+
+                <!-- Torso -->
+                <g id="farmer-torso">
+                    <ellipse cx="190" cy="450" rx="35" ry="60" fill="#4a6fa5" fill-opacity="0.6" stroke="#2d1810" stroke-width="2.5"/>
+                    <rect x="175" y="450" width="30" height="5" fill="url(#perforation)" opacity="0.5"/>
+                    <!-- Cloth texture lines -->
+                    <path d="M 165 430 Q 190 432 215 430" stroke="#2d3d35" stroke-width="0.5" fill="none" opacity="0.4"/>
+                    <path d="M 165 460 Q 190 462 215 460" stroke="#2d3d35" stroke-width="0.5" fill="none" opacity="0.4"/>
+                    <path d="M 165 490 Q 190 492 215 490" stroke="#2d3d35" stroke-width="0.5" fill="none" opacity="0.4"/>
+                </g>
+
+                <!-- Arms -->
+                <g id="farmer-arms">
+                    <!-- Left arm -->
+                    <ellipse cx="165" cy="445" rx="8" ry="28" fill="#c19a6b" fill-opacity="0.7" stroke="#2d1810" stroke-width="2" transform="rotate(-20 165 445)"/>
+                    <ellipse cx="155" cy="470" rx="7" ry="25" fill="#8b7355" fill-opacity="0.7" stroke="#2d1810" stroke-width="2" transform="rotate(-25 155 470)"/>
+                    <!-- Right arm (will hold tool) -->
+                    <ellipse cx="215" cy="450" rx="8" ry="28" fill="#c19a6b" fill-opacity="0.7" stroke="#2d1810" stroke-width="2" transform="rotate(15 215 450)"/>
+                    <ellipse cx="225" cy="478" rx="7" ry="25" fill="#8b7355" fill-opacity="0.7" stroke="#2d1810" stroke-width="2" transform="rotate(20 225 478)"/>
+                    <!-- Rivet joints -->
+                    <circle cx="165" cy="460" r="3" fill="#b8860b" stroke="#8b6914" stroke-width="1"/>
+                    <circle cx="215" cy="465" r="3" fill="#b8860b" stroke="#8b6914" stroke-width="1"/>
+                </g>
+
+                <!-- Head -->
+                <g id="farmer-head">
+                    <ellipse cx="190" cy="400" rx="25" ry="30" fill="#c19a6b" fill-opacity="0.7" stroke="#2d1810" stroke-width="2.5" filter="url(#amber-glow)"/>
+                    <!-- Face features (profile) -->
+                    <ellipse cx="195" cy="395" rx="3" ry="2" fill="#2d1810"/><!-- eye -->
+                    <path d="M 198 405 Q 200 407 198 409" stroke="#2d1810" stroke-width="1.5" fill="none"/><!-- nose -->
+                    <!-- Bamboo hat -->
+                    <ellipse cx="190" cy="380" rx="40" ry="12" fill="#d2b48c" fill-opacity="0.7" stroke="#2d1810" stroke-width="2"/>
+                    <ellipse cx="190" cy="375" rx="20" ry="8" fill="#c19a6b" fill-opacity="0.6" stroke="#2d1810" stroke-width="1.5"/>
+                    <path d="M 155 385 Q 190 378 225 385" stroke="#2d1810" stroke-width="1" fill="none"/>
+                </g>
+
+                <!-- Rivet joint at neck -->
+                <circle cx="190" cy="420" r="3" fill="#b8860b" stroke="#8b6914" stroke-width="1"/>
+                <circle cx="190" cy="505" r="3" fill="#b8860b" stroke="#8b6914" stroke-width="1"/>
+            </g>
+
+            <!-- Tools in foreground -->
+            <g id="tools-group" class="scene-element">
+                <!-- Hoe -->
+                <g id="hoe" class="tool" data-tool="hoe">
+                    <!-- Handle -->
+                    <line x1="280" y1="600" x2="320" y2="540" stroke="#8b4513" stroke-width="4" stroke-linecap="round"/>
+                    <!-- Blade -->
+                    <path d="M 318 542 L 340 535 L 342 545 L 320 552 Z"
+                          fill="#5a5a5a" fill-opacity="0.7" stroke="#2d1810" stroke-width="2" filter="url(#amber-glow)"/>
+                    <rect x="338" y="535" width="3" height="10" fill="url(#perforation)"/>
+                    <!-- Gold thread accent -->
+                    <path d="M 320 545 L 338 540" stroke="#daa520" stroke-width="1" opacity="0.8"/>
+                </g>
+
+                <!-- Shovel -->
+                <g id="shovel" class="tool" data-tool="shovel">
+                    <!-- Handle -->
+                    <line x1="380" y1="600" x2="420" y2="540" stroke="#8b4513" stroke-width="4" stroke-linecap="round"/>
+                    <!-- Blade -->
+                    <path d="M 418 542 Q 425 538 435 540 L 435 558 Q 425 560 418 556 Z"
+                          fill="#5a5a5a" fill-opacity="0.7" stroke="#2d1810" stroke-width="2" filter="url(#amber-glow)"/>
+                    <rect x="420" y="545" width="12" height="8" fill="url(#perforation)"/>
+                    <!-- Gold thread accent -->
+                    <path d="M 420 545 L 433 545" stroke="#daa520" stroke-width="1" opacity="0.8"/>
+                </g>
+            </g>
+
+            <!-- Animation elements (initially hidden) -->
+            <g id="animation-layer" style="display: none;">
+                <!-- Tunnel (for hoe success) -->
+                <ellipse id="tunnel" cx="875" cy="350" rx="0" ry="0" fill="#2d1810" fill-opacity="0.8"
+                         stroke="#daa520" stroke-width="2" style="display: none;"/>
+
+                <!-- Rain -->
+                <g id="rain" style="display: none;">
+                    <line x1="700" y1="0" x2="680" y2="100" stroke="#4a6fa5" stroke-width="1" opacity="0.5"/>
+                    <line x1="750" y1="20" x2="730" y2="120" stroke="#4a6fa5" stroke-width="1" opacity="0.5"/>
+                    <line x1="800" y1="10" x2="780" y2="110" stroke="#4a6fa5" stroke-width="1" opacity="0.5"/>
+                    <line x1="850" y1="30" x2="830" y2="130" stroke="#4a6fa5" stroke-width="1" opacity="0.5"/>
+                    <line x1="900" y1="0" x2="880" y2="100" stroke="#4a6fa5" stroke-width="1" opacity="0.5"/>
+                    <line x1="950" y1="25" x2="930" y2="125" stroke="#4a6fa5" stroke-width="1" opacity="0.5"/>
+                    <line x1="1000" y1="15" x2="980" y2="115" stroke="#4a6fa5" stroke-width="1" opacity="0.5"/>
+                    <line x1="1050" y1="5" x2="1030" y2="105" stroke="#4a6fa5" stroke-width="1" opacity="0.5"/>
+                </g>
+
+                <!-- Deity on clouds -->
+                <g id="deity" style="display: none;">
+                    <!-- Cloud -->
+                    <ellipse cx="1000" cy="150" rx="60" ry="25" fill="#ffffff" fill-opacity="0.7" stroke="#daa520" stroke-width="1"/>
+                    <ellipse cx="970" cy="160" rx="40" ry="20" fill="#ffffff" fill-opacity="0.7"/>
+                    <ellipse cx="1030" cy="160" rx="40" ry="20" fill="#ffffff" fill-opacity="0.7"/>
+
+                    <!-- Deity figure (simplified shadow puppet) -->
+                    <g transform="translate(1000, 120)">
+                        <!-- Robe -->
+                        <path d="M 0 40 Q -20 50 -25 80 L 25 80 Q 20 50 0 40 Z"
+                              fill="#dc143c" fill-opacity="0.6" stroke="#daa520" stroke-width="2" filter="url(#amber-glow)"/>
+                        <!-- Head -->
+                        <circle cx="0" cy="30" r="12" fill="#c19a6b" fill-opacity="0.7" stroke="#daa520" stroke-width="2"/>
+                        <!-- Crown -->
+                        <path d="M -10 25 L -12 15 L -5 18 L 0 12 L 5 18 L 12 15 L 10 25 Z"
+                              fill="#daa520" stroke="#b8860b" stroke-width="1"/>
+                        <!-- Arms raised -->
+                        <line x1="-15" y1="50" x2="-30" y2="35" stroke="#daa520" stroke-width="2"/>
+                        <line x1="15" y1="50" x2="30" y2="35" stroke="#daa520" stroke-width="2"/>
+                    </g>
+                </g>
+
+                <!-- Broken shovel piece -->
+                <path id="broken-shovel" d="M 430 520 L 450 500" stroke="#5a5a5a" stroke-width="3"
+                      style="display: none;"/>
+            </g>
+        </svg>
+    </div>
+
+    <div id="message-overlay">
+        <div id="message-text"></div>
+        <button id="restart-button">Restart</button>
+    </div>
+
+    <script>
+        // Get URL parameters for optional seeding
+        const urlParams = new URLSearchParams(window.location.search);
+        const seed = urlParams.get('seed');
+
+        // Simple seeded random number generator (if seed provided)
+        let rngState = seed ? parseInt(seed) : Date.now();
+        function seededRandom() {
+            if (!seed) return Math.random();
+            rngState = (rngState * 1664525 + 1013904223) % 4294967296;
+            return rngState / 4294967296;
+        }
+
+        const hoe = document.getElementById('hoe');
+        const shovel = document.getElementById('shovel');
+        const messageOverlay = document.getElementById('message-overlay');
+        const messageText = document.getElementById('message-text');
+        const restartButton = document.getElementById('restart-button');
+        const toolsGroup = document.getElementById('tools-group');
+        const farmer = document.getElementById('farmer');
+        const mountains = document.getElementById('mountains');
+
+        let interactionLocked = false;
+
+        // Tool click handlers
+        hoe.addEventListener('click', () => {
+            if (interactionLocked) return;
+            interactionLocked = true;
+            handleHoe();
+        });
+
+        shovel.addEventListener('click', () => {
+            if (interactionLocked) return;
+            interactionLocked = true;
+            handleShovel();
+        });
+
+        restartButton.addEventListener('click', () => {
+            location.reload();
+        });
+
+        // Hoe interaction: 100% success - dig tunnel
+        function handleHoe() {
+            toolsGroup.classList.add('disabled');
+
+            // Animate farmer picking up hoe
+            const farmerArm = document.querySelector('#farmer-arms ellipse:nth-of-type(4)');
+
+            // Move hoe to farmer's hand
+            const hoeElement = document.getElementById('hoe');
+            hoeElement.style.transition = 'transform 1s';
+            hoeElement.style.transform = 'translate(-60px, -80px) rotate(-45deg)';
+
+            setTimeout(() => {
+                // Digging animation
+                animateDigging(() => {
+                    // Reveal tunnel
+                    const tunnel = document.getElementById('tunnel');
+                    tunnel.style.display = 'block';
+
+                    let rx = 0, ry = 0;
+                    const tunnelInterval = setInterval(() => {
+                        rx += 3;
+                        ry += 2;
+                        tunnel.setAttribute('rx', rx);
+                        tunnel.setAttribute('ry', ry);
+
+                        if (rx >= 60) {
+                            clearInterval(tunnelInterval);
+                            setTimeout(() => {
+                                fadeAndShowMessage("You have successfully created the first underground tunnel in human history.");
+                            }, 500);
+                        }
+                    }, 30);
+                });
+            }, 1000);
+        }
+
+        // Shovel interaction: probabilistic outcomes
+        function handleShovel() {
+            toolsGroup.classList.add('disabled');
+
+            // Move shovel to farmer's hand
+            const shovelElement = document.getElementById('shovel');
+            shovelElement.style.transition = 'transform 1s';
+            shovelElement.style.transform = 'translate(-180px, -80px) rotate(-30deg)';
+
+            setTimeout(() => {
+                // Step 1: Check if shovel breaks (15% chance)
+                const rBreak = seededRandom();
+
+                if (rBreak < 0.15) {
+                    // Shovel breaks
+                    animateShovelBreak(() => {
+                        fadeAndShowMessage("Success is not guaranteed; setbacks are the main theme.");
+                    });
+                } else {
+                    // Step 2: Event selection
+                    const r = seededRandom();
+
+                    if (r < 0.20) {
+                        // 20% rain/landslide
+                        animateRainLandslide(() => {
+                            fadeAndShowMessage("Success or misfortune, which comes first?");
+                        });
+                    } else if (r < 0.70) {
+                        // 50% divine intervention (20% + 50% = 70% cumulative)
+                        animateDivineIntervention(() => {
+                            fadeAndShowMessage("Man proposes, God disposes.");
+                        });
+                    } else {
+                        // 30% success (remaining 30%)
+                        animateShovelSuccess(() => {
+                            fadeAndShowMessage("The light boat has already passed ten thousand mountains.");
+                        });
+                    }
+                }
+            }, 1000);
+        }
+
+        // Animation functions
+        function animateDigging(callback) {
+            const farmerTorso = document.getElementById('farmer-torso');
+            let count = 0;
+            const digInterval = setInterval(() => {
+                if (count % 2 === 0) {
+                    farmerTorso.style.transform = 'translate(5px, 3px) rotate(3deg)';
+                } else {
+                    farmerTorso.style.transform = 'translate(-2px, 0px) rotate(-2deg)';
+                }
+                count++;
+                if (count >= 8) {
+                    clearInterval(digInterval);
+                    farmerTorso.style.transform = '';
+                    callback();
+                }
+            }, 300);
+        }
+
+        function animateShovelBreak(callback) {
+            const shovelElement = document.getElementById('shovel');
+            const brokenPiece = document.getElementById('broken-shovel');
+
+            // Snap animation
+            shovelElement.style.transition = 'transform 0.2s';
+            shovelElement.style.transform += ' rotate(20deg)';
+
+            setTimeout(() => {
+                brokenPiece.style.display = 'block';
+                brokenPiece.style.transition = 'transform 0.5s, opacity 0.5s';
+                brokenPiece.style.transform = 'translate(30px, 40px) rotate(45deg)';
+                brokenPiece.style.opacity = '0';
+
+                setTimeout(callback, 800);
+            }, 200);
+        }
+
+        function animateRainLandslide(callback) {
+            const rain = document.getElementById('rain');
+            const frontMountain = document.getElementById('front-mountain');
+
+            rain.style.display = 'block';
+
+            // Animate rain falling
+            let rainY = 0;
+            const rainInterval = setInterval(() => {
+                rainY += 20;
+                rain.style.transform = `translateY(${rainY}px)`;
+                if (rainY >= 400) {
+                    clearInterval(rainInterval);
+                }
+            }, 100);
+
+            setTimeout(() => {
+                // Landslide - mountain collapses
+                frontMountain.style.transition = 'transform 1.5s, opacity 1.5s';
+                frontMountain.style.transform = 'translateY(100px) scale(0.9)';
+                frontMountain.style.opacity = '0.3';
+
+                // Farmer occluded
+                farmer.style.transition = 'opacity 1s';
+                farmer.style.opacity = '0.2';
+
+                setTimeout(callback, 1500);
+            }, 1500);
+        }
+
+        function animateDivineIntervention(callback) {
+            const deity = document.getElementById('deity');
+            const frontMountain = document.getElementById('front-mountain');
+            const backMountain = document.getElementById('back-mountain');
+
+            deity.style.display = 'block';
+            deity.style.transformOrigin = 'center';
+            deity.style.transform = 'translate(0, -100px)';
+            deity.style.opacity = '0';
+            deity.style.transition = 'transform 2s, opacity 2s';
+
+            setTimeout(() => {
+                deity.style.transform = 'translate(0, 0)';
+                deity.style.opacity = '1';
+            }, 100);
+
+            setTimeout(() => {
+                // Deity raises arms and mountain dissolves
+                deity.style.filter = 'drop-shadow(0 0 15px rgba(218, 165, 32, 0.9))';
+
+                // Mountain dissolves into particles
+                frontMountain.style.transition = 'opacity 2s, transform 2s';
+                frontMountain.style.opacity = '0';
+                frontMountain.style.transform = 'scale(0.5) translateY(-50px)';
+
+                backMountain.style.transition = 'opacity 2s, transform 2s';
+                backMountain.style.opacity = '0';
+                backMountain.style.transform = 'scale(0.5) translateY(-50px)';
+
+                setTimeout(callback, 2000);
+            }, 2000);
+        }
+
+        function animateShovelSuccess(callback) {
+            const frontMountain = document.getElementById('front-mountain');
+            const backMountain = document.getElementById('back-mountain');
+
+            // Progressive lowering of mountain
+            let scale = 1;
+            const lowerInterval = setInterval(() => {
+                scale -= 0.05;
+                frontMountain.style.transformOrigin = 'bottom';
+                frontMountain.style.transform = `scaleY(${scale})`;
+                backMountain.style.transformOrigin = 'bottom';
+                backMountain.style.transform = `scaleY(${scale * 0.8})`;
+
+                if (scale <= 0.3) {
+                    clearInterval(lowerInterval);
+                    setTimeout(callback, 500);
+                }
+            }, 150);
+        }
+
+        function fadeAndShowMessage(message) {
+            // Fade all scene elements
+            const sceneElements = document.querySelectorAll('.scene-element');
+            sceneElements.forEach(el => {
+                el.classList.add('fade-out');
+            });
+            toolsGroup.classList.add('fade-out');
+
+            setTimeout(() => {
+                messageText.textContent = message;
+                messageOverlay.style.display = 'flex';
+            }, 1500);
+        }
+    </script>
+</body>
+</html>
